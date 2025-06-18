@@ -1,0 +1,39 @@
+{
+  "name": "alms-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "serverless offline --config serverless.ts",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@prisma/client": "^6.9.0",
+    "@types/bcrypt": "^5.0.2",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "mocha": "^11.6.0",
+    "pg": "^8.16.0",
+    "supertest": "^7.1.1"
+  },
+  "devDependencies": {
+    "@serverless/typescript": "^4.15.1",
+    "@types/aws-lambda": "^8.10.149",
+    "@types/jest": "^29.5.14",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^24.0.1",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.0.0",
+    "prisma": "^6.9.0",
+    "serverless": "^3.40.0",
+    "serverless-dotenv-plugin": "^6.0.0",
+    "serverless-offline": "^12.0.4",
+    "serverless-plugin-typescript": "^2.1.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
