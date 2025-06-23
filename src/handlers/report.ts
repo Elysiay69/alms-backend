@@ -2,7 +2,6 @@ import { prisma } from '../dbConfig/prisma';
 import { applicationClient } from '../utils/prismaMock';
 
 // Report Handlers
-// GET /reports/statistics
 export const getStatistics = async (event: any) => {
   // Using mock client for applications
   const totalApplications = await applicationClient.count();
@@ -27,7 +26,6 @@ export const getApplicationsByStatus = async (event: any) => {
   };
 };
 
-// GET /applications/:id/pdf
 export const generateApplicationPDF = async (event: any) => {
   // Parse applicationId from pathParameters
   const applicationId = event.pathParameters && event.pathParameters.id;

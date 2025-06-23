@@ -1,18 +1,15 @@
 import { prisma } from '../dbConfig/prisma';
 
-// User Management Handlers
-// GET /users
 export const getUsers = async (event: any) => {
   try {
-    // Get users filtered by role (e.g., SHO, ACP, DCP, CP)
     const role = event.queryStringParameters?.role;
     let usersData;    if (role) {
-      usersData = await prisma.users.findMany({
+      usersData = await prisma.user.findMany({
         where: { role: { name: role } },
         include: { role: true },
       });
     } else {
-      usersData = await prisma.users.findMany({ include: { role: true } });
+      usersData = await prisma.user.findMany({ include: { role: true } });
     }
     // Format response
     interface Role {

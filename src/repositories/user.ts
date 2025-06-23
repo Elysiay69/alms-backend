@@ -1,16 +1,43 @@
 import { prisma } from '../dbConfig/prisma';
-import { User, UserWithRoleAndPermissions } from '../models/user';
+import { Prisma, User } from '@prisma/client';
 
-export const getAllUsers = async (): Promise<User[]> => prisma.users.findMany();
-export const getUserById = async (id: number): Promise<User | null> => prisma.users.findUnique({ where: { id } });
-export const updateUser = async (id: number, data: any): Promise<User> => prisma.users.update({ where: { id }, data });
-export const deleteUser = async (id: number): Promise<User> => prisma.users.delete({ where: { id } });
+// Define a type for user with role and permissions
+type UserWithRoleAndPermissions = User & {
+  role: {
+    id: number;
+    code: string;
+    name: string;
+    is_active: boolean;
+    created_at: Date;
+    updated_at: Date;
+    rolePermissions: {
+      id: number;
+      role_id: number;
+      permission_id: number;
+      created_at: Date;
+      updated_at: Date;
+      permission: {
+        id: number;
+        code: string;
+        name: string;
+        category: string;
+        created_at: Date;
+        updated_at: Date;
+      };
+    }[];
+  };
+};
+
+export const getAllUsers = async (): Promise<User[]> => prisma.user.findMany();
+export const getUserById = async (id: string): Promise<User | null> => prisma.user.findUnique({ where: { id } });
+export const updateUser = async (id: string, data: any): Promise<User> => prisma.user.update({ where: { id }, data });
+export const deleteUser = async (id: string): Promise<User> => prisma.user.delete({ where: { id } });
 export const findUserByUsername = async (username: string): Promise<User | null> => {
   // Ensure username is properly passed
   if (!username) {
     throw new Error('Username is required for findUserByUsername');
   }
-  return prisma.users.findUnique({ 
+  return prisma.user.findUnique({ 
     where: { 
       username: username  // Explicitly use the property name
     } 
@@ -19,14 +46,14 @@ export const findUserByUsername = async (username: string): Promise<User | null>
 
 /**
  * Get user with role and permissions by ID
- * @param {number} id - User ID
+ * @param {string} id - User ID
  * @returns {Promise<UserWithRoleAndPermissions|null>} User with role and permissions
  */
-export const getUserWithRoleAndPermissions = async (id: number): Promise<UserWithRoleAndPermissions|null> => {
+export const getUserWithRoleAndPermissions = async (id: string): Promise<UserWithRoleAndPermissions|null> => {
   if (!id) {
     throw new Error('User ID is required for getUserWithRoleAndPermissions');
   }
-  return prisma.users.findUnique({
+  return prisma.user.findUnique({
     where: { id },
     include: {
       role: {
