@@ -1,5 +1,4 @@
-// User Response Types
-import { User } from '../models/user';
+import { Users } from '@prisma/client';
 
 /**
  * Response format for user data - excludes sensitive information
@@ -17,7 +16,7 @@ export interface UserResponse {
 /**
  * Converts a User entity to a safe UserResponse object
  */
-export const toUserResponse = (user: User): UserResponse => ({
+export const toUserResponse = (user: Users): UserResponse => ({
   id: user.id,
   username: user.username,
   email: user.email,

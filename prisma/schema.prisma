@@ -7,117 +7,84 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Roles {
+model Role {
   id               Int              @id @default(autoincrement())
   code             String           @unique
   name             String
   is_active        Boolean          @default(true)
   created_at       DateTime         @default(now())
   updated_at       DateTime         @updatedAt
-  // Relations
-  users            Users[]
-  rolePermissions  RolePermissions[]
-  @@map("roles")
+  users            User[]
+  rolePermissions  RolePermission[]
 }
-model Permissions {
+
+model Permission {
   id               Int              @id @default(autoincrement())
   code             String           @unique
   name             String
   category         String
   created_at       DateTime         @default(now())
   updated_at       DateTime         @updatedAt
-  // Relations
-  rolePermissions  RolePermissions[]
-  @@map("permissions")
-}
-model RolePermissions {
-  id               Int              @id @default(autoincrement())
-  role             Roles            @relation(fields: [role_id], references: [id])
-  role_id          Int
-  permission       Permissions      @relation(fields: [permission_id], references: [id])
-  permission_id    Int
-  created_at       DateTime         @default(now())
-  updated_at       DateTime         @updatedAt
-  @@unique([role_id, permission_id])
-  @@map("role_permissions")
+  rolePermissions  RolePermission[]
 }
 
+model RolePermission {
+  id           Int         @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+  role         Role        @relation(fields: [roleId], references: [id])
+  permission   Permission  @relation(fields: [permissionId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-model States {
-  id        Int         @id @default(autoincrement())
-  name      String      @unique
-  districts Districts[]
-  users     Users[]
-
-  @@map("states")
+  @@unique([roleId, permissionId])
 }
 
-model Districts {
-  id      Int     @id @default(autoincrement())
-  name    String
-  state   States  @relation(fields: [stateId], references: [id])
-  stateId Int
-  zones   Zones[]
-  users   Users[]
-
-  @@map("districts")
+model User {
+  id            String          @id @default(uuid())
+  username      String          @unique
+  officeName    String          @unique
+  email         String?         @unique
+  phoneNo       String?         @unique
+  password      String
+  roleId        Int
+  role          Role            @relation(fields: [roleId], references: [id])
+  flowMaps      FlowMap[]       // ✅ One User -> Many Flows
+  nextUserInFlows FlowNextUser[] @relation("NextUserInFlow") // ✅ ADD THIS
+  actionsFrom   ActionHistory[]  @relation("ActionFromUser") // ✅ ADD THIS (see 2️⃣ below)
+  actionsTo     ActionHistory[]  @relation("ActionToUser")   // ✅ ADD THIS (see 2️⃣ below)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 }
 
-model Zones {
-  id         Int         @id @default(autoincrement())
-  name       String
-  district   Districts   @relation(fields: [districtId], references: [id])
-  districtId Int
-  divisions  Divisions[]
-  users      Users[]
-
-  @@map("zones")
+model FlowMap {
+  id            String           @id @default(uuid())
+  currentUserId String
+  currentUser   User             @relation(fields: [currentUserId], references: [id])
+  nextUsers     FlowNextUser[]
+  actions       ActionHistory[]  // ✅ Add this opposite relation
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 }
 
-model Divisions {
-  id       Int              @id @default(autoincrement())
-  name     String
-  zone     Zones            @relation(fields: [zoneId], references: [id])
-  zoneId   Int
-  stations PoliceStations[]
-  users    Users[]
 
-  @@map("divisions")
+model FlowNextUser {
+  id         String   @id @default(uuid())
+  flowMapId  String
+  nextUserId String
+  nextUser   User     @relation("NextUserInFlow", fields: [nextUserId], references: [id])  // ✅ NAMED relation
+  flowMap    FlowMap  @relation(fields: [flowMapId], references: [id])
 }
 
-model PoliceStations {
-  id         Int       @id @default(autoincrement())
-  name       String
-  division   Divisions @relation(fields: [divisionId], references: [id])
-  divisionId Int
-  users      Users[]
-
-  @@map("police_stations")
-}
-
-model Users {
-  id              Int             @id @default(autoincrement())
-  username        String          @unique
-  email           String          @unique
-  passwordHash    String
-  isActive        Boolean         @default(true)
-  lastLogin       DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @default(now())
-  // Foreign Keys
-  role            Roles           @relation(fields: [roleId], references: [id])
-  roleId          Int
-  state           States?         @relation(fields: [stateId], references: [id])
-  stateId         Int?
-  district        Districts?      @relation(fields: [districtId], references: [id])
-  districtId      Int?
-  zone            Zones?          @relation(fields: [zoneId], references: [id])
-  zoneId          Int?
-  division        Divisions?      @relation(fields: [divisionId], references: [id])
-  divisionId      Int?
-  policeStation   PoliceStations? @relation(fields: [policeStationId], references: [id])
-  policeStationId Int?
-
-  @@map("users")
+model ActionHistory {
+  id             String    @id @default(uuid())
+  flowMapId      String
+  flowMap        FlowMap   @relation(fields: [flowMapId], references: [id]) // ✅ Good now
+  fromUserId     String
+  toUserId       String
+  fromUser       User      @relation("ActionFromUser", fields: [fromUserId], references: [id])
+  toUser         User      @relation("ActionToUser", fields: [toUserId], references: [id])
+  actionTaken    String
+  createdAt      DateTime  @default(now())
 }
 

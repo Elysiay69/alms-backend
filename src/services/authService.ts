@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 const { JWT_SECRET, JWT_EXPIRY, ERROR_MESSAGES } = require('../constants/auth');
 import { LoginRequest } from '../request/authRequest';
 import { LoginResponse, UserProfileResponse } from '../response/authResponse';
-import { User, UserWithRoleAndPermissions } from '../models/user';
 import * as userRepository from '../repositories/user';
 
 /**
@@ -39,7 +38,7 @@ const authenticateUser = async (
             return { success: false, message: ERROR_MESSAGES.INVALID_USERNAME };
         }        
         // Verify password with bcrypt
-        const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+        const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return { success: false, message: ERROR_MESSAGES.INVALID_PASSWORD };
         }
@@ -134,7 +133,11 @@ const getUserProfile = async (token: string): Promise<GetUserProfileResponse> =>
         }
 
         // Extract permissions from role
-        const permissions = user.role?.rolePermissions.map((rp) => ({
+        interface RolePermission {
+            permission: Permission;
+        }
+
+        const permissions: Permission[] = (user.role?.rolePermissions as RolePermission[])?.map((rp: RolePermission) => ({
             id: rp.permission.id,
             code: rp.permission.code,
             name: rp.permission.name,
@@ -148,16 +151,9 @@ const getUserProfile = async (token: string): Promise<GetUserProfileResponse> =>
                 id: user.id, 
                 username: user.username, 
                 email: user.email,
-                isActive: user.isActive,
-                lastLogin: user.lastLogin,
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
                 roleId: user.roleId,
-                stateId: user.stateId,
-                districtId: user.districtId,
-                zoneId: user.zoneId,
-                divisionId: user.divisionId,
-                policeStationId: user.policeStationId,
                 role: {
                     id: user.role?.id,
                     code: user.role?.code,
