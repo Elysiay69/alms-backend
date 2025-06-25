@@ -7,20 +7,15 @@ export interface GetUsersRequest {
  * Represents a User entity in the database
  */
 export interface User {
-  id: number;
+  id: string;
   username: string;
-  email: string;
-  passwordHash: string;
-  isActive: boolean;
-  lastLogin: Date | null;
+  officeName: string;
+  email?: string;
+  phoneNo?: string;
+  password: string;
+  roleId: number;
   createdAt: Date;
   updatedAt: Date;
-  roleId: number;
-  stateId?: number | null;
-  districtId?: number | null;
-  zoneId?: number | null;
-  divisionId?: number | null;
-  policeStationId?: number | null;
 }
 
 /**

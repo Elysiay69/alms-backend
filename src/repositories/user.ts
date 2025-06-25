@@ -68,3 +68,23 @@ export const getUserWithRoleAndPermissions = async (id: string): Promise<UserWit
     }
   }) as Promise<UserWithRoleAndPermissions|null>;
 };
+
+export const createUser = async (data: {
+  username: string;
+  officeName: string;
+  email?: string;
+  phoneNo?: string;
+  password: string;
+  roleId: number;
+}): Promise<User> => {
+  return prisma.user.create({
+    data: {
+      username: data.username,
+      officeName: data.officeName,
+      email: data.email,
+      phoneNo: data.phoneNo,
+      password: data.password,
+      roleId: data.roleId
+    }
+  });
+};

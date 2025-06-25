@@ -148,12 +148,12 @@ const getUserProfile = async (token: string): Promise<GetUserProfileResponse> =>
         return { 
             success: true, 
             data: { 
-                id: user.id, 
+                id: Number(user.id), 
                 username: user.username, 
-                email: user.email,
+                email: user.email ?? '', 
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
-                roleId: user.roleId,
+                roleId: Number(user.roleId),
                 role: {
                     id: user.role?.id,
                     code: user.role?.code,
