@@ -1,69 +1,109 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
+import { PrismaClient } from '@prisma/client'
+const prisma = new PrismaClient()
 
 async function main() {
-  // Insert roles
-  const roles = [
-    { id: 1, code: 'APPLICANT', name: 'Applicant', description: 'Citizen Applicant', level: 1 },
-    { id: 2, code: 'DCP', name: 'Deputy Commissioner', description: 'Deputy Commissioner of Police', level: 2 },
-    { id: 3, code: 'ACP', name: 'Assistant Commissioner', description: 'Assistant Commissioner of Police', level: 3 },
-    { id: 4, code: 'SHO', name: 'Station House Officer', description: 'Station House Officer', level: 4 },
-    { id: 5, code: 'ZS', name: 'Zonal Superintendent', description: 'Zonal Superintendent', level: 5 },
-    { id: 6, code: 'AS', name: 'Arms Superintendent', description: 'Arms Superintendent', level: 6 },
-    { id: 7, code: 'ARMS_SUPDT', name: 'ARMS Superintendent', description: 'ARMS Superintendent', level: 7 },
-    { id: 8, code: 'ARMS_SEAT', name: 'ARMS Seat Officer', description: 'ARMS Seat Officer', level: 8 },
-    { id: 9, code: 'ADO', name: 'Administrative Officer', description: 'Administrative Officer', level: 9 },
-    { id: 10, code: 'CADO', name: 'Chief Administrative Officer', description: 'Chief Administrative Officer', level: 10 },
-    { id: 11, code: 'JTCP', name: 'Joint Commissioner', description: 'Joint Commissioner of Police', level: 11 },
-    { id: 12, code: 'CP', name: 'Commissioner of Police', description: 'Commissioner of Police', level: 12 },
-    { id: 13, code: 'ADMIN', name: 'System Administrator', description: 'System Administrator', level: 13 },
-  ];
+  // 1️⃣ Create Permissions (with individual create to capture returned objects)
+  const permissionForward = await prisma.permission.create({
+    data: { code: 'FORWARD', name: 'Forward Application', category: 'Action' }
+  })
+  const permissionApprove = await prisma.permission.create({
+    data: { code: 'APPROVE', name: 'Approve Application', category: 'Action' }
+  })
+  const permissionReview = await prisma.permission.create({
+    data: { code: 'REVIEW', name: 'Review Application', category: 'Action' }
+  })
 
-  for (const role of roles) {
-    try {
-      await prisma.role.upsert({
-        where: { id: role.id },
-        update: {},
-        create: {
-          id: role.id,
-          code: role.code,
-          name: role.name,
-          description: role.description,
-          level: role.level,
-        },
-      });
-    } catch (error) {
-      console.error(`Error inserting role: ${role.name}`, error);
+  // 2️⃣ Create Roles and attach permissions
+  const zsRole = await prisma.role.create({
+    data: {
+      code: 'ZS',
+      name: 'Zonal Supervisor',
+      rolePermissions: {
+        create: [
+          { permissionId: permissionForward.id },
+          { permissionId: permissionApprove.id },
+          { permissionId: permissionReview.id }
+        ]
+      }
     }
-  }
+  })
 
-  // Insert dummy users
-  const defaultPassword = 'Password123';
-  const hashedPassword = bcrypt.hashSync(defaultPassword, 10);
-
-  const dummyUsers = [
-    { username: 'dummy1', email: 'dummy1@example.com', name: 'Dummy User 1', role_id: 1 },
-    { username: 'dummy2', email: 'dummy2@example.com', name: 'Dummy User 2', role_id: 2 },
-    { username: 'dummy3', email: 'dummy3@example.com', name: 'Dummy User 3', role_id: 3 },
-  ];
-
-  for (const user of dummyUsers) {
-    try {
-      await prisma.user.create({
-        data: {
-          username: user.username,
-          email: user.email,
-          password_hash: hashedPassword,
-          role_id: user.role_id,
-          name: user.name,
-        },
-      });
-    } catch (error) {
-      console.error(`Error inserting dummy user: ${user.email}`, error);
+  const acpRole = await prisma.role.create({
+    data: {
+      code: 'ACP',
+      name: 'Assistant Commissioner of Police',
+      rolePermissions: {
+        create: [
+          { permissionId: permissionForward.id },
+          { permissionId: permissionApprove.id }
+        ]
+      }
     }
-  }
+  })
+
+  // 3️⃣ Create Users
+  const userA = await prisma.user.create({
+    data: {
+      username: 'userA',
+      officeName: 'Office A',
+      email: 'userA@example.com',
+      phoneNo: '1111111111',
+      password: 'hashed-password-a',
+      roleId: zsRole.id
+    }
+  })
+
+  const userB = await prisma.user.create({
+    data: {
+      username: 'userB',
+      officeName: 'Office B',
+      email: 'userB@example.com',
+      phoneNo: '2222222222',
+      password: 'hashed-password-b',
+      roleId: acpRole.id
+    }
+  })
+
+  const userC = await prisma.user.create({
+    data: {
+      username: 'userC',
+      officeName: 'Office C',
+      email: 'userC@example.com',
+      phoneNo: '3333333333',
+      password: 'hashed-password-c',
+      roleId: acpRole.id
+    }
+  })
+
+  // 4️⃣ Create FlowMap for userA → can forward to userB and userC
+  const flow = await prisma.flowMap.create({
+    data: {
+      currentUserId: userA.id,
+      nextUsers: {
+        create: [
+          { nextUserId: userB.id },
+          { nextUserId: userC.id }
+        ]
+      }
+    }
+  })
+
+  // 5️⃣ Create ActionHistory (userA forwarded to userB)
+  await prisma.actionHistory.create({
+    data: {
+      flowMapId: flow.id,
+      fromUserId: userA.id,
+      toUserId: userB.id,
+      actionTaken: 'FORWARD'
+    }
+  })
+
+  console.log('✅ Seed completed successfully!')
 }
 
-main().finally(() => prisma.$disconnect());
+main()
+  .catch(e => {
+    console.error(e)
+    process.exit(1)
+  })
+  .finally(() => prisma.$disconnect())

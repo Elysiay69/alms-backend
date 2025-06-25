@@ -47,6 +47,54 @@ const serverlessConfiguration: AWS = {
         },
       ],
     },
+    createUser: {
+      handler: 'src/handlers/user.createUser',
+      events: [
+        {
+          http: {
+            path: 'api/users',
+            method: 'post',
+            ...corsHeaders
+          },
+        },
+      ],
+    },
+    getUserById: {
+      handler: 'src/handlers/user.getUserById',
+      events: [
+        {
+          http: {
+            path: 'api/users/{id}',
+            method: 'get',
+            ...corsHeaders
+          },
+        },
+      ],
+    },
+    updateUserById: {
+      handler: 'src/handlers/user.updateUserById',
+      events: [
+        {
+          http: {
+            path: 'api/users/{id}',
+            method: 'put',
+            ...corsHeaders
+          },
+        },
+      ],
+    },
+    deleteUserById: {
+      handler: 'src/handlers/user.deleteUserById',
+      events: [
+        {
+          http: {
+            path: 'api/users/{id}',
+            method: 'delete',
+            ...corsHeaders
+          },
+        },
+      ],
+    },
     // Authentication
     login: {
       handler: 'src/handlers/auth.login',
@@ -251,6 +299,30 @@ const serverlessConfiguration: AWS = {
           http: {
             path: 'api/roles/hierarchy',
             method: 'get',
+            ...corsHeaders
+          },
+        },
+      ],
+    },
+    addRole: {
+      handler: 'src/handlers/role.addRole',
+      events: [
+        {
+          http: {
+            path: 'api/roles',
+            method: 'post',
+            ...corsHeaders
+          },
+        },
+      ],
+    },
+    updateRoleById: {
+      handler: 'src/handlers/role.updateRoleById',
+      events: [
+        {
+          http: {
+            path: 'api/roles/{id}',
+            method: 'put',
             ...corsHeaders
           },
         },

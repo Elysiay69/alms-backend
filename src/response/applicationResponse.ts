@@ -4,5 +4,4 @@ export interface ApplicationResponse {
   applicantName: string;
   status: string;
   createdAt: string;
-  // ...other fields
 }

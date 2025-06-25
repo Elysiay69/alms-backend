@@ -1,27 +1,29 @@
-import { Users } from '@prisma/client';
+import { User } from '@prisma/client';
 
 /**
  * Response format for user data - excludes sensitive information
  */
 export interface UserResponse {
-  id: number;
+  id: string;
   username: string;
-  email: string;
+  officeName: string;
+  email?: string;
+  phoneNo?: string;
   roleId: number;
-  isActive: boolean;
-  lastLogin?: Date;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 /**
  * Converts a User entity to a safe UserResponse object
  */
-export const toUserResponse = (user: Users): UserResponse => ({
+export const toUserResponse = (user: User): UserResponse => ({
   id: user.id,
   username: user.username,
-  email: user.email,
+  officeName: user.officeName,
+  email: user.email ?? undefined,
+  phoneNo: user.phoneNo ?? undefined,
   roleId: user.roleId,
-  isActive: user.isActive,
-  lastLogin: user.lastLogin || undefined,
-  createdAt: user.createdAt
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt
 });
