@@ -15,6 +15,16 @@ export interface UserResponse {
 }
 
 /**
+ * Response format for user list data
+ */
+export interface UserListItemResponse {
+  id: string;
+  username: string;
+  email?: string;
+  role: string;
+}
+
+/**
  * Converts a User entity to a safe UserResponse object
  */
 export const toUserResponse = (user: User): UserResponse => ({
@@ -27,3 +37,16 @@ export const toUserResponse = (user: User): UserResponse => ({
   createdAt: user.createdAt,
   updatedAt: user.updatedAt
 });
+
+/**
+ * Converts an array of users (with roles) to a UserListItemResponse array
+ * @param users Array of users with optional role information
+ */
+export const toUserListResponse = (users: any[]): UserListItemResponse[] => {
+  return users.map(user => ({
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role?.name || user.roleId,
+  }));
+};

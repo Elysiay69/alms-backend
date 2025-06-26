@@ -28,7 +28,19 @@ type UserWithRoleAndPermissions = User & {
   };
 };
 
-export const getAllUsers = async (): Promise<User[]> => prisma.user.findMany();
+export const getAllUsers = async (includeRole: boolean = false): Promise<User[]> => {
+  return prisma.user.findMany({
+    include: includeRole ? { role: true } : undefined
+  });
+};
+
+export const getUsersByRole = async (roleName: string): Promise<User[]> => {
+  return prisma.user.findMany({
+    where: { role: { name: roleName } },
+    include: { role: true }
+  });
+};
+
 export const getUserById = async (id: string): Promise<User | null> => prisma.user.findUnique({ where: { id } });
 export const updateUser = async (id: string, data: any): Promise<User> => prisma.user.update({ where: { id }, data });
 export const deleteUser = async (id: string): Promise<User> => prisma.user.delete({ where: { id } });

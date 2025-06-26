@@ -1,49 +1,30 @@
 import { prisma } from '../dbConfig/prisma';
-import { createUser as repoCreateUser, getUserById as repoGetUserById, updateUser as repoUpdateUser, deleteUser as repoDeleteUser } from '../repositories/user';
-import { toUserResponse } from '../response/userResponse';
+import { toUserResponse, toUserListResponse } from '../response/userResponse';
+import { 
+  getAllUsersService, 
+  getUsersByRoleService, 
+  getUserByIdService, 
+  createUserService, 
+  updateUserService, 
+  deleteUserService 
+} from '../services/userService';
 import * as bcrypt from 'bcryptjs';
 
 export const getUsers = async (event: any) => {
   try {
-    const role = event.queryStringParameters?.role;
-    let usersData;    if (role) {
-      usersData = await prisma.user.findMany({
-        where: { role: { name: role } },
-        include: { role: true },
-      });
-    } else {
-      usersData = await prisma.user.findMany({ include: { role: true } });
-    }
-    // Format response
-    interface Role {
-      id: string;
-      name: string;
-    }
-
-    interface User {
-      id: string;
-      username: string;
-      email: string;
-      roleId: string;
-      role?: Role | null;
-    }
-
-    interface UserResult {
-      id: string;
-      username: string;
-      email: string;
-      role: string;
-    }
-
-    const result: UserResult[] = usersData.map((u: any) => ({
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      role: u.role?.name || u.roleId,
-    }));
+    // Always retrieve all users with their role data
+    const usersData = await getAllUsersService(true); // true to include role data
+    
+    const result = toUserListResponse(usersData);
+    
+    // Return the response in a format API Gateway expects
     return {
       statusCode: 200,
-      body: JSON.stringify(result),
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // CORS header
+      },
+      body:  result,
     };
   } catch (error) {
     console.error('Get Users Error:', error);
@@ -56,10 +37,12 @@ export const getUsers = async (event: any) => {
 
 export const createUser = async (event: any) => {
   try {
-    const body = JSON.parse(event.body);
+    // Parse the request body if it's a string
+    const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+    
     // Hash password
     const hashedPassword = await bcrypt.hash(body.password, 10);
-    const user = await repoCreateUser({
+    const user = await createUserService({
       username: body.username,
       officeName: body.officeName,
       email: body.email,
@@ -69,12 +52,21 @@ export const createUser = async (event: any) => {
     });
     return {
       statusCode: 201,
-      body: JSON.stringify(toUserResponse(user)),
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // CORS header
+      },
+      body: JSON.stringify({ data: toUserResponse(user) }),
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create User Error:', error);
+    
     return {
       statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // CORS header
+      },
       body: JSON.stringify({ message: 'Internal server error.' }),
     };
   }
@@ -82,19 +74,46 @@ export const createUser = async (event: any) => {
 
 export const getUserById = async (event: any) => {
   try {
-    const id = event.pathParameters.id;
-    const user = await repoGetUserById(id);
-    if (!user) {
-      return { statusCode: 404, body: JSON.stringify({ message: 'User not found.' }) };
+    const id = event.query;
+    if (!id) {
+      return { 
+        statusCode: 400, 
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*', // CORS header
+        },
+        body: JSON.stringify({ message: 'Missing path parameter: id' }) 
+      };
     }
+    
+    const user = await getUserByIdService(id);
+    if (!user) {
+      return { 
+        statusCode: 404, 
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*', // CORS header
+        },
+        body: JSON.stringify({ message: 'User not found.' }) 
+      };
+    }
+    
     return {
       statusCode: 200,
-      body: JSON.stringify(toUserResponse(user)),
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // CORS header
+      },
+      body: JSON.stringify({ data: toUserResponse(user) }),
     };
   } catch (error) {
     console.error('Get User By ID Error:', error);
     return {
       statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // CORS header
+      },
       body: JSON.stringify({ message: 'Internal server error.' }),
     };
   }
@@ -102,20 +121,52 @@ export const getUserById = async (event: any) => {
 
 export const updateUserById = async (event: any) => {
   try {
-    const id = event.pathParameters.id;
-    const body = JSON.parse(event.body);
+    // Check if pathParameters exists
+    // if (!event.pathParameters) {
+    //   return { 
+    //     statusCode: 400, 
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //       'Access-Control-Allow-Origin': '*', // CORS header
+    //     },
+    //     body: JSON.stringify({ message: 'Missing path parameter: id' }) 
+    //   };
+    // }
+    
+    const id = event.query;
+    // if (!id) {
+    //   return { 
+    //     statusCode: 400, 
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //       'Access-Control-Allow-Origin': '*', // CORS header
+    //     },
+    //     body: JSON.stringify({ message: 'Missing path parameter: id' }) 
+    //   };
+    // }
+    
+    const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+    
     if (body.password) {
       body.password = await bcrypt.hash(body.password, 10);
     }
-    const user = await repoUpdateUser(id, body);
+    const user = await updateUserService(id, body);
     return {
       statusCode: 200,
-      body: JSON.stringify(toUserResponse(user)),
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // CORS header
+      },
+      body: JSON.stringify({ data: toUserResponse(user) }),
     };
   } catch (error) {
     console.error('Update User Error:', error);
     return {
       statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // CORS header
+      },
       body: JSON.stringify({ message: 'Internal server error.' }),
     };
   }
@@ -123,16 +174,47 @@ export const updateUserById = async (event: any) => {
 
 export const deleteUserById = async (event: any) => {
   try {
+    // Check if pathParameters exists
+    if (!event.pathParameters) {
+      return { 
+        statusCode: 400, 
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*', // CORS header
+        },
+        body: JSON.stringify({ message: 'Missing path parameter: id' }) 
+      };
+    }
+    
     const id = event.pathParameters.id;
-    await repoDeleteUser(id);
+    if (!id) {
+      return { 
+        statusCode: 400, 
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*', // CORS header
+        },
+        body: JSON.stringify({ message: 'Missing path parameter: id' }) 
+      };
+    }
+    
+    await deleteUserService(id);
     return {
       statusCode: 204,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // CORS header
+      },
       body: '',
     };
   } catch (error) {
     console.error('Delete User Error:', error);
     return {
       statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // CORS header
+      },
       body: JSON.stringify({ message: 'Internal server error.' }),
     };
   }
