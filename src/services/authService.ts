@@ -32,6 +32,7 @@ const authenticateUser = async (
         }
 
         const user = await userRepository.findUserByUsername(username);
+        console.log('User found:====35', user);
 
         if (!user) {
             return { statusCode: 401, message: ERROR_MESSAGES.INVALID_USERNAME };

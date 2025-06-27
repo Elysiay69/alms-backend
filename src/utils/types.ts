@@ -2,6 +2,7 @@ export type Nullable<T> = T | null;
 
 export interface ApiResponse<T> {
   statusCode: number; // Added statusCode for HTTP responses
+  success?: boolean; // Added success property
   data?: Nullable<T>;
   message?: string;
   error?: {

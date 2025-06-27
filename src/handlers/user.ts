@@ -11,8 +11,9 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { ApiResponse, UserResponse, UserListItemResponse, Nullable } from '../utils/types';
 
-function createApiResponse<T>(success: boolean, data: T | null = null, message?: string): ApiResponse<T> {
+function createApiResponse<T>(success: boolean, data: T | null = null, message?: string, statusCode: number = 200): ApiResponse<T> {
   return {
+    statusCode,
     success,
     data: data || undefined,
     message,

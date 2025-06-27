@@ -338,7 +338,7 @@ const serverlessConfiguration: AWS = {
     },
     dotenv: {
       path: './.env',
-      include: ['CLIENT_ID', 'USER_POOL_ID', 'JWT_SECRET'],
+      include: ['CLIENT_ID', 'USER_POOL_ID', 'JWT_SECRET', 'DATABASE_URL', 'NODE_ENV'],
     },
   },
 };
