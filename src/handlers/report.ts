@@ -5,7 +5,7 @@ import { applicationClient } from '../utils/prismaMock';
 export const getStatistics = async (event: any) => {
   // Using mock client for applications
   const totalApplications = await applicationClient.count();
-  const totalUsers = await prisma.users.count();
+  const totalUsers = await prisma.user.count();
   return {
     statusCode: 200,
     body: JSON.stringify({ totalApplications, totalUsers }),

@@ -2,17 +2,18 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { JWT_SECRET, JWT_EXPIRY, ERROR_MESSAGES } = require('../constants/auth');
 import { LoginRequest } from '../request/authRequest';
-import { LoginResponse, UserProfileResponse } from '../response/authResponse';
+import { LoginResponse } from '../response/authResponse';
 import * as userRepository from '../repositories/user';
-
-/**
- * Interface for service responses
- */
-interface ServiceResponse<T> {
-    success: boolean;
-    data?: T;
-    message?: string;
-}
+import {
+    ServiceResponse,
+    Permission,
+    Role,
+    UserProfile,
+    GetUserProfileResponse,
+    JwtPayload,
+    RolePermission,
+    ExtractTokenFromHeader
+} from '../utils/interfaces';
 
 /**
  * Authenticate a user with username and password
@@ -25,38 +26,45 @@ const authenticateUser = async (
 ): Promise<ServiceResponse<LoginResponse>> => {
     try {
         const { username, password } = loginData;
-        
-        // Validate input
+
         if (!username || !password) {
-            return { success: false, message: ERROR_MESSAGES.CREDENTIALS_REQUIRED };
+            return { statusCode: 400, message: ERROR_MESSAGES.CREDENTIALS_REQUIRED };
         }
-        
-        // Find user by username using repository function
+
         const user = await userRepository.findUserByUsername(username);
-        
+
         if (!user) {
-            return { success: false, message: ERROR_MESSAGES.INVALID_USERNAME };
-        }        
-        // Verify password with bcrypt
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            return { success: false, message: ERROR_MESSAGES.INVALID_PASSWORD };
+            return { statusCode: 401, message: ERROR_MESSAGES.INVALID_USERNAME };
         }
-          // Generate JWT token
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
+            return { statusCode: 401, message: ERROR_MESSAGES.INVALID_PASSWORD };
+        }
+
         const token: string = jwt.sign(
-            { userId: user.id, username: user.username, role: user.roleId }, 
-            JWT_SECRET, 
+            { userId: user.id, username: user.username, role: user.roleId },
+            JWT_SECRET,
             { expiresIn: JWT_EXPIRY }
         );
 
-        // Return login response using the interface
-        return { 
-            success: true, 
-            data: { token } 
-        };
-    } catch (error) {
+        return { statusCode: 200, data: { token } };
+    } catch (error: any) {
         console.error('Authentication error:', error);
-        return { success: false, message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR };
+
+        // Log additional details if available
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        const errorStack = error instanceof Error ? error.stack : null;
+
+        if (errorStack) {
+            console.error('Error stack:', errorStack);
+        }
+
+        return {
+            statusCode: 500,
+            message: errorMessage || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
+        };
     }
 };
 
@@ -75,66 +83,18 @@ const authenticateUser = async (
  * @param {string} token - JWT token
  * @returns {Promise<{success: boolean, data?: Object, message?: string}>}
  */
-interface Permission {
-    id: number;
-    code: string;
-    name: string;
-    category: string;
-}
-
-interface Role {
-    id: number;
-    code: string;
-    name: string;
-}
-
-interface UserProfile {
-    id: number;
-    username: string;
-    email: string;
-    isActive: boolean;
-    lastLogin: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-    roleId: number;
-    stateId: number | null;
-    districtId: number | null;
-    zoneId: number | null;
-    divisionId: number | null;
-    policeStationId: number | null;
-    role: Role;
-    permissions: Permission[];
-}
-
-interface GetUserProfileResponse {
-    success: boolean;
-    data?: UserProfile;
-    message?: string;
-}
-
-interface JwtPayload {
-    userId: number;
-    username: string;
-    role: number;
-    iat?: number;
-    exp?: number;
-}
-
-const getUserProfile = async (token: string): Promise<GetUserProfileResponse> => {
+const getUserProfile = async (token: string): Promise<ServiceResponse<UserProfile>> => {
     try {
-        // Verify token
+        console.log('Get user profile with token:', token);
         const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-        
-        // Get user data with role information using the repository
-        const user = await userRepository.getUserWithRoleAndPermissions(decoded.userId);
-        
-        if (!user) {
-            return { success: false, message: ERROR_MESSAGES.USER_NOT_FOUND };
+        console.log({decoded})
+        if (!decoded) {
+            return { statusCode: 401, message: ERROR_MESSAGES.INVALID_TOKEN };
         }
-
-        // Extract permissions from role
-        interface RolePermission {
-            permission: Permission;
+        const user = await userRepository.getUserWithRoleAndPermissions(decoded.userId.toString());
+        console.log('User retrieved:', user);
+        if (!user) {
+            return { statusCode: 404, message: ERROR_MESSAGES.USER_NOT_FOUND };
         }
 
         const permissions: Permission[] = (user.role?.rolePermissions as RolePermission[])?.map((rp: RolePermission) => ({
@@ -144,13 +104,12 @@ const getUserProfile = async (token: string): Promise<GetUserProfileResponse> =>
             category: rp.permission.category
         })) || [];
 
-        // Return user profile with all user fields and role/permissions data
-        return { 
-            success: true, 
-            data: { 
-                id: Number(user.id), 
-                username: user.username, 
-                email: user.email ?? '', 
+        return {
+            statusCode: 200,
+            data: {
+                id: Number(user.id),
+                username: user.username,
+                email: user.email ?? '',
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
                 roleId: Number(user.roleId),
@@ -160,11 +119,11 @@ const getUserProfile = async (token: string): Promise<GetUserProfileResponse> =>
                     name: user.role?.name
                 },
                 permissions: permissions
-            } 
+            }
         };
     } catch (error) {
         console.error('Get user profile error:', error);
-        return { success: false, message: ERROR_MESSAGES.INVALID_TOKEN };
+        return { statusCode: 401, message: ERROR_MESSAGES.INVALID_TOKEN };
     }
 };
 
@@ -173,15 +132,29 @@ const getUserProfile = async (token: string): Promise<GetUserProfileResponse> =>
  * @param {string|undefined} authHeader - Authorization header
  * @returns {string|null} - JWT token or null
  */
-interface ExtractTokenFromHeader {
-    (authHeader: string | undefined): string | null;
-}
-
 const extractTokenFromHeader: ExtractTokenFromHeader = (authHeader) => {
     if (!authHeader) {
         return null;
     }
     return authHeader.replace('Bearer ', '');
+};
+
+const enhanceErrorHandling = (error: any, defaultMessage: string) => {
+    console.error('Error:', error);
+
+    // Log additional details if available
+    const errorMessage = error instanceof Error ? error.message : defaultMessage;
+    const errorStack = error instanceof Error ? error.stack : null;
+
+    if (errorStack) {
+        console.error('Error stack:', errorStack);
+    }
+
+    return {
+    
+        statusCode: 500,
+        message: errorMessage,
+    };
 };
 
 module.exports = {

@@ -1,6 +1,14 @@
 // Auth Response Types
 export interface LoginResponse {
-  token: string;
+  statusCode: number;
+  body?: {
+    token: string;
+  },
+  success: boolean;
+  error?: {
+    message: string;
+  }
+  
 }
 
 export interface PermissionResponse {

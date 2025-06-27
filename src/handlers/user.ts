@@ -9,33 +9,31 @@ import {
   deleteUserService 
 } from '../services/userService';
 import * as bcrypt from 'bcryptjs';
+import { ApiResponse, UserResponse, UserListItemResponse, Nullable } from '../utils/types';
 
-export const getUsers = async (event: any) => {
+function createApiResponse<T>(success: boolean, data: T | null = null, message?: string): ApiResponse<T> {
+  return {
+    success,
+    data: data || undefined,
+    message,
+  };
+}
+
+export const getUsers = async (event: any): Promise<ApiResponse<UserListItemResponse[]>> => {
   try {
     // Always retrieve all users with their role data
     const usersData = await getAllUsersService(true); // true to include role data
     
     const result = toUserListResponse(usersData);
     
-    // Return the response in a format API Gateway expects
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // CORS header
-      },
-      body:  result,
-    };
+    return createApiResponse(true, result);
   } catch (error) {
     console.error('Get Users Error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: 'Internal server error.' }),
-    };
+    return createApiResponse(false, null as unknown as UserListItemResponse[], 'Internal server error.');
   }
 };
 
-export const createUser = async (event: any) => {
+export const createUser = async (event: any): Promise<ApiResponse<UserResponse>> => {
   try {
     // Parse the request body if it's a string
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
@@ -48,74 +46,31 @@ export const createUser = async (event: any) => {
       email: body.email,
       phoneNo: body.phoneNo,
       password: hashedPassword,
-      roleId: body.roleId
+      roleId: body.roleId,
     });
-    return {
-      statusCode: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // CORS header
-      },
-      body: JSON.stringify({ data: toUserResponse(user) }),
-    };
-  } catch (error: any) {
+    return createApiResponse(true, toUserResponse(user));
+  } catch (error) {
     console.error('Create User Error:', error);
-    
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // CORS header
-      },
-      body: JSON.stringify({ message: 'Internal server error.' }),
-    };
+    return createApiResponse(false, null as Nullable<UserResponse>, 'Internal server error.');
   }
 };
 
-export const getUserById = async (event: any) => {
+export const getUserById = async (event: any): Promise<ApiResponse<UserResponse>> => {
   try {
     const id = event.query;
     if (!id) {
-      return { 
-        statusCode: 400, 
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*', // CORS header
-        },
-        body: JSON.stringify({ message: 'Missing path parameter: id' }) 
-      };
+      return createApiResponse(false, null as Nullable<UserResponse>, 'Missing path parameter: id');
     }
     
     const user = await getUserByIdService(id);
     if (!user) {
-      return { 
-        statusCode: 404, 
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*', // CORS header
-        },
-        body: JSON.stringify({ message: 'User not found.' }) 
-      };
+      return createApiResponse(false, null as Nullable<UserResponse>, 'User not found.');
     }
     
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // CORS header
-      },
-      body: JSON.stringify({ data: toUserResponse(user) }),
-    };
+    return createApiResponse(true, toUserResponse(user));
   } catch (error) {
     console.error('Get User By ID Error:', error);
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // CORS header
-      },
-      body: JSON.stringify({ message: 'Internal server error.' }),
-    };
+    return createApiResponse(false, null as Nullable<UserResponse>, 'Internal server error.');
   }
 };
 

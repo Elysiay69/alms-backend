@@ -2,6 +2,7 @@ import { prisma } from '../dbConfig/prisma';
 import { authenticate } from '../middleware/authMiddleware';
 import { authorize } from '../middleware/roleMiddleware';
 import { applicationClient, applicationHistoryClient } from '../utils/prismaMock';
+import { createSuccessResponse, createErrorResponse } from '../utils/responseHelpers';
 
 export const getApplications = async (event: any) => {
   try {
@@ -27,16 +28,10 @@ export const getApplications = async (event: any) => {
       take: Number(pageSize),
       orderBy: { created_at: 'desc' },
     });
-    return {
-      statusCode: 200,
-      body: JSON.stringify(applications),
-    };
+    return createSuccessResponse(200, applications);
   } catch (error) {
     console.error('Get Applications Error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: 'Internal server error.' }),
-    };
+    return createErrorResponse(500, 'Internal server error.');
   }
 };
 

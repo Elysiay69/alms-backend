@@ -62,23 +62,30 @@ export const findUserByUsername = async (username: string): Promise<User | null>
  * @returns {Promise<UserWithRoleAndPermissions|null>} User with role and permissions
  */
 export const getUserWithRoleAndPermissions = async (id: string): Promise<UserWithRoleAndPermissions|null> => {
-  if (!id) {
-    throw new Error('User ID is required for getUserWithRoleAndPermissions');
-  }
-  return prisma.user.findUnique({
-    where: { id },
-    include: {
-      role: {
-        include: {
-          rolePermissions: {
-            include: {
-              permission: true
-            }
-          }
-        }
-      }
+  try {
+    if (!id) {
+      throw new Error('User ID is required for getUserWithRoleAndPermissions');
     }
-  }) as Promise<UserWithRoleAndPermissions|null>;
+    return prisma.user.findUnique({
+      where: { id },
+      // include: {
+      //   role: {
+      //     include: {
+      //       rolePermissions: {
+      //         include: {
+      //           permission: true
+      //         }
+      //       }
+      //     }
+      //   }
+      // }
+    }) as Promise<UserWithRoleAndPermissions|null>;
+
+  } catch (error) {
+    console.error('Error in getUserWithRoleAndPermissions:', error);
+    throw new Error('Failed to fetch user with role and permissions');
+    
+  }
 };
 
 export const createUser = async (data: {
