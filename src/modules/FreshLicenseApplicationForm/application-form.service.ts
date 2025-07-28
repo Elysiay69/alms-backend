@@ -386,7 +386,6 @@ export class ApplicationFormService {
     if (filter.currentUserId !== undefined) {
       where.currentUserId = filter.currentUserId;
     }
-    console.log(filter.statusId,filter.currentUserId, ".............389" )
     return await prisma.freshLicenseApplicationsForms.findMany({
       where,
       include: {

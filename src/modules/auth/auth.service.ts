@@ -27,7 +27,6 @@ export class AuthService {
     try {
       // For now, using dummy validation
       const user = await this.validateUser(username, password);
-      // console.log(user,"........user .......28")
       
       if (!user) {
         throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
